@@ -1,13 +1,44 @@
-- name: Force Ad-Hoc Signing
+name: Build Winlator iOS
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Force Ad-Hoc Signing
         run: |
-          # Find the entitlements file regardless of where it is
           ENTITLEMENTS_PATH=$(find . -name "*.entitlements" | head -n 1)
-          echo "Found entitlements at: $ENTITLEMENTS_PATH"
-          
           if [ -z "$ENTITLEMENTS_PATH" ]; then
-            echo "❌ Error: Could not find entitlements file!"
-            exit 1
+            echo "❌ No entitlements found"
+          else
+            echo "Found: $ENTITLEMENTS_PATH"
+            sed -i '' 's/com.apple.developer.team-identifier/$(DevelopmentTeam)/g' "$ENTITLEMENTS_PATH"
           fi
 
-          # Apply the fix to the file we found
-          sed -i '' 's/com.apple.developer.team-identifier/$(DevelopmentTeam)/g' "$ENTITLEMENTS_PATH"
+      - name: Build Archive
+        run: |
+          xcodebuild archive \
+            -scheme WinlatoriOS \
+            -archivePath build/WinlatoriOS.xcarchive \
+            -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: Export IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/WinlatoriOS.xcarchive/Products/Applications/*.app Payload/
+          zip -r WinlatoriOS.ipa Payload
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WinlatoriOS-IPA
+          path: WinlatoriOS.ipa
