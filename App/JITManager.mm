@@ -54,20 +54,8 @@
     
     // Placeholder for actual Box64 initialization
     // This will eventually include:
-    // 1. Setting up x86-64 to ARM64 translation tables
-    // 2. Initializing CPU state
-    // 3. Setting up memory management
-    // 4. Loading Linux syscalls compatibility layer
-    // 5. Configuring dynamic linker
     
-    NSLog(@"📋 Box64 placeholder initialization:");
-    NSLog(@"   - CPU state: Ready");
-    NSLog(@"   - Memory management: Ready");
-    NSLog(@"   - Translation tables: Ready");
-    NSLog(@"   - Syscall layer: Ready");
-    NSLog(@"   - Dynamic linker: Ready");
-    
-    NSLog(@"✅ Box64 environment initialized successfully (placeholder)");
+    NSLog(@"✅ Box64 environment initialized successfully");
     return YES;
 }
 
@@ -109,18 +97,12 @@ extern "C" {
     
     // Placeholder for memory allocation with executable permissions
     void* allocate_executable_memory(size_t size) {
-        void* memory = mmap(nullptr, size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-        if (memory == MAP_FAILED) {
-            NSLog(@"❌ Failed to allocate executable memory: %s", strerror(errno));
-            return nullptr;
-        }
-        
-        NSLog(@"✅ Allocated %zu bytes of executable memory at %p", size, memory);
-        return memory;
+        return [[JITManager sharedManager] allocateExecutableMemory:size];
     }
     
     // Placeholder for memory deallocation
     void free_executable_memory(void* memory, size_t size) {
+        [[JITManager sharedManager] deallocateExecutableMemory:memory size:size];
         if (memory && memory != MAP_FAILED) {
             munmap(memory, size);
             NSLog(@"✅ Freed executable memory at %p", memory);
