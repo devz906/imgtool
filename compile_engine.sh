@@ -58,17 +58,6 @@ sed -i.bak 's/^#define PROT_EXEC/\/\/ #define PROT_EXEC/' src/include/os.h
 # Fix JUMPBUFF definition for iOS - use proper jmp_buf type
 sed -i.bak 's/#define JUMPBUFF struct __jmp_buf_tag/#define JUMPBUFF jmp_buf/' src/include/os.h
 
-# Check what NEW_JUMPBUFF actually looks like and fix it properly
-echo "🔍 Checking NEW_JUMPBUFF macro definition..."
-grep -n "NEW_JUMPBUFF" src/include/os.h
-
-# Fix NEW_JUMPBUFF macro - replace the entire multi-line definition
-sed -i.bak '/#define NEW_JUMPBUFF/,/\\$/c\
-#define NEW_JUMPBUFF(name) jmp_buf name' src/include/os.h
-
-# Also fix GET_JUMPBUFF if it exists
-sed -i.bak 's/#define GET_JUMPBUFF(name).*/#define GET_JUMPBUFF(name) \&name/' src/include/os.h
-
 echo "✅ iOS patches applied"
 
 # Create build directory
@@ -101,9 +90,9 @@ cmake ../box64_source \
     -DCMAKE_INSTALL_LIBDIR="lib" \
     -DCMAKE_MACOSX_BUNDLE=OFF
 
-# Build Box64
-echo "🔨 Building Box64 for iOS A18 Pro..."
-make -j$(sysctl -n hw.ncpu)
+# Build Box64 - only build interpreter target to avoid dynarec issues
+echo "🔨 Building Box64 for iOS A18 Pro (interpreter only)..."
+make interpreter -j$(sysctl -n hw.ncpu)
 
 # Check if box64 binary was created
 if [ -f "box64" ]; then
