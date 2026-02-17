@@ -58,9 +58,16 @@ sed -i.bak 's/^#define PROT_EXEC/\/\/ #define PROT_EXEC/' src/include/os.h
 # Fix JUMPBUFF definition for iOS - use proper jmp_buf type
 sed -i.bak 's/#define JUMPBUFF struct __jmp_buf_tag/#define JUMPBUFF jmp_buf/' src/include/os.h
 
-# Fix NEW_JUMPBUFF macro for iOS - be more careful with line continuation
-sed -i.bak '/#define NEW_JUMPBUFF(name)/,+1c\
+# Check what NEW_JUMPBUFF actually looks like and fix it properly
+echo "🔍 Checking NEW_JUMPBUFF macro definition..."
+grep -n "NEW_JUMPBUFF" src/include/os.h
+
+# Fix NEW_JUMPBUFF macro - replace the entire multi-line definition
+sed -i.bak '/#define NEW_JUMPBUFF/,/\\$/c\
 #define NEW_JUMPBUFF(name) jmp_buf name' src/include/os.h
+
+# Also fix GET_JUMPBUFF if it exists
+sed -i.bak 's/#define GET_JUMPBUFF(name).*/#define GET_JUMPBUFF(name) \&name/' src/include/os.h
 
 echo "✅ iOS patches applied"
 
