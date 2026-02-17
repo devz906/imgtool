@@ -33,6 +33,18 @@ jobs:
         echo "🔧 Making compile_engine.sh executable..."
         chmod +x compile_engine.sh
         ls -la compile_engine.sh
+        # Double-check permissions
+        if [ -x "compile_engine.sh" ]; then
+          echo "✅ Script is executable"
+        else
+          echo "❌ Script is not executable, trying alternative method..."
+          # Alternative method using bash directly
+          echo "#!/bin/bash" > temp_script.sh
+          cat compile_engine.sh | tail -n +2 >> temp_script.sh
+          chmod +x temp_script.sh
+          mv temp_script.sh compile_engine.sh
+          ls -la compile_engine.sh
+        fi
         
     - name: Compile Box64 for iOS A18 Pro
       run: |
