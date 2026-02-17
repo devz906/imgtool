@@ -68,35 +68,18 @@ cmake ../box64_source \
     -DNOGIT=ON \
     -DARM64=1 \
     -DLD80BITS=1 \
-    -DALIGN=1
+    -DALIGN=1 \
+    -DCMAKE_INSTALL_BINDIR="bin" \
+    -DCMAKE_INSTALL_LIBDIR="lib" \
+    -DCMAKE_MACOSX_BUNDLE=OFF
 
 # Build Box64
 echo "🔨 Building Box64 for iOS A18 Pro..."
 make -j$(sysctl -n hw.ncpu)
 
-# Install
-echo "📦 Installing Box64..."
-make install
-
-# Verify the library was created
-if [ -f "../$INSTALL_DIR/lib/libbox64.dylib" ]; then
-    echo "✅ libbox64.dylib created successfully!"
-    
-    # Get library info
-    LIB_SIZE=$(stat -f%z "../$INSTALL_DIR/lib/libbox64.dylib")
-    echo "📊 Library size: $LIB_SIZE bytes"
-    
-    # Check architecture
-    echo "🔍 Verifying architecture..."
-    lipo -info "../$INSTALL_DIR/lib/libbox64.dylib"
-    
-    # Check for 16KB page support in binary
-    echo "📄 Checking for 16KB page support..."
-    if strings "../$INSTALL_DIR/lib/libbox64.dylib" | grep -q "16KB"; then
-        echo "✅ 16KB page support found in binary"
-    else
-        echo "⚠️  16KB page support not explicitly found (may be compiled in)"
-    fi
+# Check if box64 binary was created
+if [ -f "box64" ]; then
+    echo "✅ Box64 binary created successfully!"
     
     # Create iOS framework structure
     echo "📚 Creating iOS Framework structure..."
@@ -106,8 +89,8 @@ if [ -f "../$INSTALL_DIR/lib/libbox64.dylib" ]; then
     mkdir -p "$FRAMEWORK_DIR/Headers"
     mkdir -p "$FRAMEWORK_DIR/Modules"
     
-    # Copy library to framework
-    cp "../$INSTALL_DIR/lib/libbox64.dylib" "$FRAMEWORK_DIR/Box64"
+    # Copy binary to framework
+    cp "box64" "$FRAMEWORK_DIR/Box64"
     
     # Create Info.plist for framework
     cat > "$FRAMEWORK_DIR/Info.plist" << EOF
@@ -150,14 +133,6 @@ framework module Box64 {
 }
 EOF
     
-    # Copy headers if available
-    if [ -d "../$INSTALL_DIR/include" ]; then
-        cp -R ../$INSTALL_DIR/include/* "$FRAMEWORK_DIR/Headers/" 2>/dev/null || true
-    fi
-    
-    echo "✅ Box64.framework created successfully!"
-    echo "📁 Framework location: $FRAMEWORK_DIR"
-    
     # Create a simple header for iOS integration
     cat > "$FRAMEWORK_DIR/Headers/box64.h" << EOF
 #ifndef BOX64_H
@@ -174,7 +149,7 @@ int box64_init(int argc, char** argv);
 int box64_run(const char* executable_path, int argc, char** argv);
 
 // Box64 cleanup
-void box64_cleanup();
+void box64_cleanup(void);
 
 // Memory management for 16KB pages
 void* box64_alloc_16kb(size_t size);
@@ -191,7 +166,16 @@ int box64_disable_jit(void);
 #endif /* BOX64_H */
 EOF
     
-    echo "📄 Box64 header created for iOS integration"
+    echo "✅ Box64.framework created successfully!"
+    echo "📁 Framework location: $FRAMEWORK_DIR"
+    
+    # Get binary info
+    BIN_SIZE=$(stat -f%z "box64")
+    echo "📊 Binary size: $BIN_SIZE bytes"
+    
+    # Check architecture
+    echo "🔍 Verifying architecture..."
+    lipo -info "box64"
     
     # Display final summary
     echo ""
@@ -202,13 +186,116 @@ EOF
     echo "🔧 Features: ARM_DYNAREC=ON, PAGE16K=ON, APPLE=1"
     echo "📦 Output: Box64.framework"
     echo "🔢 Commit: $COMMIT_HASH"
-    echo "📊 Size: $LIB_SIZE bytes"
+    echo "📊 Size: $BIN_SIZE bytes"
     echo ""
     echo "🚀 Ready for iOS integration!"
     
 else
-    echo "❌ ERROR: libbox64.dylib was not created!"
-    exit 1
+    echo "❌ ERROR: box64 binary was not created!"
+    echo "🔍 Checking for build errors..."
+    
+    # Try to find any built files
+    if [ -f "src/libbox64.a" ]; then
+        echo "📦 Found static library: src/libbox64.a"
+        echo "🔄 Creating dynamic library from static library..."
+        
+        # Create dynamic library
+        "$CC_PATH" -dynamiclib -o "../libbox64.dylib" \
+            -sysroot "$SYSROOT_PATH" \
+            -target "$TARGET_ARCH-apple-ios$MIN_IOS_VERSION" \
+            -install_name "@rpath/libbox64.dylib" \
+            src/libbox64.a \
+            -framework Foundation \
+            -framework UIKit \
+            $CPU_FLAGS -flto
+        
+        if [ -f "../libbox64.dylib" ]; then
+            echo "✅ libbox64.dylib created successfully!"
+            
+            # Create framework from dylib
+            FRAMEWORK_DIR="../Box64.framework"
+            rm -rf "$FRAMEWORK_DIR"
+            
+            mkdir -p "$FRAMEWORK_DIR/Headers"
+            mkdir -p "$FRAMEWORK_DIR/Modules"
+            
+            cp "../libbox64.dylib" "$FRAMEWORK_DIR/Box64"
+            
+            # Create Info.plist
+            cat > "$FRAMEWORK_DIR/Info.plist" << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleExecutable</key>
+    <string>Box64</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.devz906.box64</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>Box64</string>
+    <key>CFBundlePackageType</key>
+    <string>FMWK</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleVersion</key>
+    <string>$COMMIT_HASH</string>
+    <key>MinimumOSVersion</key>
+    <string>$MIN_IOS_VERSION</string>
+    <key>CFBundleSupportedPlatforms</key>
+    <array>
+        <string>iPhoneOS</string>
+    </array>
+</dict>
+</plist>
+EOF
+            
+            # Create header and module map as before...
+            cat > "$FRAMEWORK_DIR/Headers/box64.h" << EOF
+#ifndef BOX64_H
+#define BOX64_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// Box64 main initialization
+int box64_init(int argc, char** argv);
+
+// Box64 execution
+int box64_run(const char* executable_path, int argc, char** argv);
+
+// Box64 cleanup
+void box64_cleanup(void);
+
+// Memory management for 16KB pages
+void* box64_alloc_16kb(size_t size);
+void box64_free_16kb(void* ptr);
+
+// JIT compilation support
+int box64_enable_jit(void);
+int box64_disable_jit(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* BOX64_H */
+EOF
+            
+            echo "✅ Box64.framework created from static library!"
+            
+        else
+            echo "❌ Failed to create dynamic library"
+            exit 1
+        fi
+    else
+        echo "❌ No build artifacts found"
+        exit 1
+    fi
 fi
 
 # Clean up build directory
