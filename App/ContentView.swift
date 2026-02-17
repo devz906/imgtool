@@ -58,18 +58,6 @@ struct ContentView: View {
                 .padding()
                 .background(Color(.systemGray6))
                 .cornerRadius(10)
-                        Text("✅ Optimal 16KB page size detected")
-                            .font(.caption)
-                            .foregroundColor(.green)
-                    } else if pageSize == 4096 {
-                        Text("⚠️ 4KB page size - supported but less optimal")
-                            .font(.caption)
-                            .foregroundColor(.orange)
-                    }
-                }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(10)
                 
                 // Control Buttons
                 VStack(spacing: 15) {
