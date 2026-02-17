@@ -32,10 +32,20 @@ jobs:
       run: |
         echo "🔧 Making compile_engine.sh executable..."
         chmod +x compile_engine.sh
+        ls -la compile_engine.sh
         
     - name: Compile Box64 for iOS A18 Pro
       run: |
         echo "🚀 Compiling Box64 for iOS A18 Pro..."
+        if [ ! -f "compile_engine.sh" ]; then
+          echo "❌ compile_engine.sh not found!"
+          exit 1
+        fi
+        if [ ! -x "compile_engine.sh" ]; then
+          echo "❌ compile_engine.sh is not executable!"
+          exit 1
+        fi
+        echo "✅ Script found and executable, running..."
         ./compile_engine.sh
         
     - name: Verify Box64 Framework
@@ -74,14 +84,14 @@ jobs:
                    clean build
                    
     - name: Upload Box64 Framework
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: Box64-Framework
         path: Box64.framework/
         retention-days: 30
         
     - name: Upload Build Logs
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: Build-Logs
         path: build/
