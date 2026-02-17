@@ -1,36 +1,13 @@
-name: Build Winlator iOS
-on: [push]
-
-jobs:
-  build:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Force Ad-Hoc Signing
+- name: Force Ad-Hoc Signing
         run: |
-          # This tricks Xcode into building without a paid dev account
-          sed -i '' 's/com.apple.developer.team-identifier/$(DevelopmentTeam)/g' WinlatoriOS.entitlements
-
-      - name: Build Archive
-        run: |
-          xcodebuild archive \
-            -scheme WinlatoriOS \
-            -archivePath build/WinlatoriOS.xcarchive \
-            -sdk iphoneos \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY=""
-
-      - name: Export IPA
-        run: |
-          mkdir -p Payload
-          cp -r build/WinlatoriOS.xcarchive/Products/Applications/*.app Payload/
-          zip -r WinlatoriOS.ipa Payload
+          # Find the entitlements file regardless of where it is
+          ENTITLEMENTS_PATH=$(find . -name "*.entitlements" | head -n 1)
+          echo "Found entitlements at: $ENTITLEMENTS_PATH"
           
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: WinlatoriOS-IPA
-          path: WinlatoriOS.ipa
+          if [ -z "$ENTITLEMENTS_PATH" ]; then
+            echo "❌ Error: Could not find entitlements file!"
+            exit 1
+          fi
+
+          # Apply the fix to the file we found
+          sed -i '' 's/com.apple.developer.team-identifier/$(DevelopmentTeam)/g' "$ENTITLEMENTS_PATH"
