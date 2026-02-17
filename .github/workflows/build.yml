@@ -28,45 +28,18 @@ jobs:
         xcrun --find clang
         xcrun --find clang++
         
-    - name: Make compilation script executable
+    - name: Verify Winkor Engine Binary
       run: |
-        echo "🔧 Making compile_engine.sh executable..."
-        chmod +x compile_engine.sh
-        ls -la compile_engine.sh
-        # Double-check permissions
-        if [ -x "compile_engine.sh" ]; then
-          echo "✅ Script is executable"
-        else
-          echo "❌ Script is not executable, trying alternative method..."
-          # Alternative method using bash directly
-          echo "#!/bin/bash" > temp_script.sh
-          cat compile_engine.sh | tail -n +2 >> temp_script.sh
-          chmod +x temp_script.sh
-          mv temp_script.sh compile_engine.sh
-          ls -la compile_engine.sh
-        fi
-        
-    - name: Compile Box64 for iOS A18 Pro
-      run: |
-        echo "🚀 Compiling Box64 for iOS A18 Pro..."
-        if [ ! -f "compile_engine.sh" ]; then
-          echo "❌ compile_engine.sh not found!"
-          exit 1
-        fi
-        echo "🔧 Running script directly with bash to avoid permission issues..."
-        bash compile_engine.sh
-        
-    - name: Verify Box64 Framework
-      run: |
-        echo "🔍 Verifying Box64.framework..."
-        if [ -d "Box64.framework" ]; then
-          echo "✅ Framework directory exists"
-          echo "📊 Framework contents:"
-          ls -la Box64.framework/
+        echo "🔍 Verifying winkor_engine binary..."
+        if [ -f "Binaries/winkor_engine" ]; then
+          echo "✅ Binary found"
+          echo "� Binary info:"
+          file Binaries/winkor_engine
+          ls -la Binaries/winkor_engine
           echo "🔍 Binary architecture:"
-          lipo -info Box64.framework/Box64
+          lipo -info Binaries/winkor_engine
         else
-          echo "❌ Framework not found!"
+          echo "❌ Binary not found!"
           exit 1
         fi
         
@@ -91,11 +64,11 @@ jobs:
                    CODE_SIGNING_ALLOWED=NO \
                    clean build
                    
-    - name: Upload Box64 Framework
+    - name: Upload Winkor Engine Binary
       uses: actions/upload-artifact@v4
       with:
-        name: Box64-Framework
-        path: Box64.framework/
+        name: Winkor-Engine
+        path: Binaries/winkor_engine
         retention-days: 30
         
     - name: Upload Build Logs
