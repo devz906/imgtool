@@ -147,20 +147,21 @@ struct ContentView: View {
         statusMessage = "Initializing JIT environment..."
         
         DispatchQueue.global(qos: .userInitiated).async {
-            let success = JITManager.initializeJITEnvironment()
+            let jitManager = JITManager.sharedManager
+            let success = jitManager.enableJITWithError(nil)
             
             DispatchQueue.main.async {
                 if success {
                     self.isJITInitialized = true
                     self.statusMessage = "JIT environment initialized successfully"
-                    self.alertMessage = "JIT environment is ready! ptrace has been initialized and write protection is enabled."
+                    self.alertMessage = "JIT environment is ready! Memory allocation and write protection are enabled."
                     self.showingAlert = true
                     
                     // Check page size after JIT initialization
                     self.checkPageSize()
                 } else {
-                    self.statusMessage = "Failed to initialize JIT environment"
-                    self.alertMessage = "Failed to initialize JIT environment. Check console for details."
+                    self.statusMessage = "JIT initialization failed"
+                    self.alertMessage = "Failed to initialize JIT environment. Please ensure proper entitlements are set."
                     self.showingAlert = true
                 }
             }
@@ -171,17 +172,19 @@ struct ContentView: View {
         statusMessage = "Initializing Box64 environment..."
         
         DispatchQueue.global(qos: .userInitiated).async {
-            let success = JITManager.initializeBox64Environment()
+            let jitManager = JITManager.sharedManager
+            let use16KPages = jitManager.supports16KPages()
+            let success = jitManager.initializeBox64With16KPages(use16KPages, error: nil)
             
             DispatchQueue.main.async {
                 if success {
                     self.isBox64Initialized = true
                     self.statusMessage = "Box64 environment initialized successfully"
-                    self.alertMessage = "Box64 environment is ready! 16KB page size check passed and placeholder initialization complete."
+                    self.alertMessage = "Box64 is ready! \(use16KPages ? "16KB pages" : "4KB pages") optimization enabled."
                     self.showingAlert = true
                 } else {
-                    self.statusMessage = "Failed to initialize Box64 environment"
-                    self.alertMessage = "Failed to initialize Box64 environment. Check console for details."
+                    self.statusMessage = "Box64 initialization failed"
+                    self.alertMessage = "Failed to initialize Box64 environment."
                     self.showingAlert = true
                 }
             }
@@ -190,17 +193,12 @@ struct ContentView: View {
     
     private func checkPageSize() {
         DispatchQueue.global(qos: .userInitiated).async {
-            let success = JITManager.check16KBPageSize()
+            let jitManager = JITManager.sharedManager
+            let supports16K = jitManager.supports16KPages()
             
             DispatchQueue.main.async {
-                if success {
-                    // Get actual page size
-                    self.pageSize = 16384 // We'll update this with actual value
-                    self.statusMessage = "Page size check completed successfully"
-                } else {
-                    self.pageSize = 0
-                    self.statusMessage = "Page size check failed"
-                }
+                self.systemPageSize = supports16K ? "16KB" : "4KB"
+                self.statusMessage = "Page size detected: \(self.systemPageSize)"
             }
         }
     }
