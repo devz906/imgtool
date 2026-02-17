@@ -29,24 +29,23 @@
     // Method 1: Check if we're running in a debugger-like environment
     // This can help with JIT activation on iOS
     
-    // Method 2: Use mach_vm_allocate for executable memory
-    vm_protect_result_t result;
-    mach_vm_address_t address = 0;
-    mach_vm_size_t size = getpagesize();
+    // Method 2: Use vm_allocate for executable memory (iOS compatible)
+    vm_address_t address = 0;
+    vm_size_t size = getpagesize();
     
-    kern_return_t kr = mach_vm_allocate(mach_task_self(), &address, size, VM_FLAGS_ANYWHERE);
+    kern_return_t kr = vm_allocate(mach_task_self(), &address, size, VM_FLAGS_ANYWHERE);
     if (kr == KERN_SUCCESS) {
         // Try to make memory executable
-        kr = mach_vm_protect(mach_task_self(), address, size, VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE, FALSE);
+        kr = vm_protect(mach_task_self(), address, size, VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE, FALSE);
         if (kr == KERN_SUCCESS) {
             // Clean up test allocation
-            mach_vm_deallocate(mach_task_self(), address, size);
+            vm_deallocate(mach_task_self(), address, size);
             return YES;
         }
-        mach_vm_deallocate(mach_task_self(), address, size);
+        vm_deallocate(mach_task_self(), address, size);
     }
     
-    // If mach methods fail, return NO but don't set error for now
+    // If vm methods fail, return NO but don't set error for now
     return NO;
 }
 
@@ -77,17 +76,17 @@
 }
 
 - (void *)allocateExecutableMemory:(size_t)size {
-    // Use mach_vm_allocate for iOS-compatible executable memory
-    mach_vm_address_t address = 0;
+    // Use vm_allocate for iOS-compatible executable memory
+    vm_address_t address = 0;
     
-    kern_return_t kr = mach_vm_allocate(mach_task_self(), &address, size, VM_FLAGS_ANYWHERE);
+    kern_return_t kr = vm_allocate(mach_task_self(), &address, size, VM_FLAGS_ANYWHERE);
     if (kr == KERN_SUCCESS) {
         // Make memory executable
-        kr = mach_vm_protect(mach_task_self(), address, size, VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE, FALSE);
+        kr = vm_protect(mach_task_self(), address, size, VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE, FALSE);
         if (kr == KERN_SUCCESS) {
             return (void *)address;
         }
-        mach_vm_deallocate(mach_task_self(), address, size);
+        vm_deallocate(mach_task_self(), address, size);
     }
     
     return NULL;
@@ -95,7 +94,7 @@
 
 - (void)deallocateExecutableMemory:(void *)memory size:(size_t)size {
     if (memory) {
-        mach_vm_deallocate(mach_task_self(), (mach_vm_address_t)memory, size);
+        vm_deallocate(mach_task_self(), (vm_address_t)memory, size);
     }
 }
 
