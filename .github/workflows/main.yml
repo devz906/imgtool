@@ -1,22 +1,36 @@
-# This workflow will build a Swift project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-swift
-
-name: Swift
-
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+name: Build Winlator iOS
+on: [push]
 
 jobs:
   build:
-
     runs-on: macos-latest
-
     steps:
-    - uses: actions/checkout@v4
-    - name: Build
-      run: swift build -v
-    - name: Run tests
-      run: swift test -v
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Force Ad-Hoc Signing
+        run: |
+          # This tricks Xcode into building without a paid dev account
+          sed -i '' 's/com.apple.developer.team-identifier/$(DevelopmentTeam)/g' WinlatoriOS.entitlements
+
+      - name: Build Archive
+        run: |
+          xcodebuild archive \
+            -scheme WinlatoriOS \
+            -archivePath build/WinlatoriOS.xcarchive \
+            -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: Export IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/WinlatoriOS.xcarchive/Products/Applications/*.app Payload/
+          zip -r WinlatoriOS.ipa Payload
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WinlatoriOS-IPA
+          path: WinlatoriOS.ipa
