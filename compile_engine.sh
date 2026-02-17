@@ -43,6 +43,19 @@ cd box64_source
 COMMIT_HASH=$(git rev-parse --short HEAD)
 echo "🔢 Box64 Commit: $COMMIT_HASH"
 
+# Apply iOS compatibility patches
+echo "🔧 Applying iOS compatibility patches..."
+
+# Fix PROT_* macro redefinition by wrapping them in ifndef guards
+sed -i.bak 's|#define PROT_READ|#ifndef PROT_READ\n#define PROT_READ|g' src/include/os.h
+sed -i.bak 's|#define PROT_WRITE|#ifndef PROT_WRITE\n#define PROT_WRITE|g' src/include/os.h
+sed -i.bak 's|#define PROT_EXEC|#ifndef PROT_EXEC\n#define PROT_EXEC|g' src/include/os.h
+
+# Add endif at the end of the macro definitions
+sed -i.bak 's|#define PROT_EXEC  0x4|#define PROT_EXEC  0x4\n#endif|g' src/include/os.h
+
+echo "✅ iOS patches applied"
+
 # Create build directory
 mkdir -p "../$BUILD_DIR"
 cd "../$BUILD_DIR"
@@ -56,8 +69,8 @@ cmake ../box64_source \
     -DCMAKE_OSX_ARCHITECTURES="$TARGET_ARCH" \
     -DCMAKE_C_COMPILER="$CC_PATH" \
     -DCMAKE_CXX_COMPILER="$CXX_PATH" \
-    -DCMAKE_C_FLAGS="$CPU_FLAGS -O3 -flto" \
-    -DCMAKE_CXX_FLAGS="$CPU_FLAGS -O3 -flto" \
+    -DCMAKE_C_FLAGS="$CPU_FLAGS -O3 -flto -D_XOPEN_SOURCE=700 -D__USE_GNU -D sincos=__sincos" \
+    -DCMAKE_CXX_FLAGS="$CPU_FLAGS -O3 -flto -D_XOPEN_SOURCE=700 -D__USE_GNU -D sincos=__sincos" \
     -DCMAKE_EXE_LINKER_FLAGS="-flto" \
     -DCMAKE_SHARED_LINKER_FLAGS="-flto" \
     -DCMAKE_BUILD_TYPE=Release \
