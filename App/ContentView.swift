@@ -146,11 +146,11 @@ struct ContentView: View {
     private func initializeJIT() {
         statusMessage = "Initializing JIT environment..."
         
-        DispatchQueue.global(qos: .userInitiated).async {
-            let jitManager = JITManager.sharedManager
+        DispatchQueue.global(qos: .userInitiated).async(execute: DispatchWorkItem {
+            let jitManager = JITManager.sharedManager()
             let success = jitManager.enableJITWithError(nil)
             
-            DispatchQueue.main.async {
+            DispatchQueue.main.async(execute: DispatchWorkItem {
                 if success {
                     self.isJITInitialized = true
                     self.statusMessage = "JIT environment initialized successfully"
@@ -164,19 +164,19 @@ struct ContentView: View {
                     self.alertMessage = "Failed to initialize JIT environment. Please ensure proper entitlements are set."
                     self.showingAlert = true
                 }
-            }
-        }
+            })
+        })
     }
     
     private func initializeBox64() {
         statusMessage = "Initializing Box64 environment..."
         
-        DispatchQueue.global(qos: .userInitiated).async {
-            let jitManager = JITManager.sharedManager
+        DispatchQueue.global(qos: .userInitiated).async(execute: DispatchWorkItem {
+            let jitManager = JITManager.sharedManager()
             let use16KPages = jitManager.supports16KPages()
             let success = jitManager.initializeBox64With16KPages(use16KPages, error: nil)
             
-            DispatchQueue.main.async {
+            DispatchQueue.main.async(execute: DispatchWorkItem {
                 if success {
                     self.isBox64Initialized = true
                     self.statusMessage = "Box64 environment initialized successfully"
@@ -187,20 +187,20 @@ struct ContentView: View {
                     self.alertMessage = "Failed to initialize Box64 environment."
                     self.showingAlert = true
                 }
-            }
-        }
+            })
+        })
     }
     
     private func checkPageSize() {
-        DispatchQueue.global(qos: .userInitiated).async {
-            let jitManager = JITManager.sharedManager
+        DispatchQueue.global(qos: .userInitiated).async(execute: DispatchWorkItem {
+            let jitManager = JITManager.sharedManager()
             let supports16K = jitManager.supports16KPages()
             
-            DispatchQueue.main.async {
+            DispatchQueue.main.async(execute: DispatchWorkItem {
                 self.systemPageSize = supports16K ? "16KB" : "4KB"
                 self.statusMessage = "Page size detected: \(self.systemPageSize)"
-            }
-        }
+            })
+        })
     }
     
     private func resetEnvironment() {
