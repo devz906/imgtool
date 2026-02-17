@@ -46,13 +46,14 @@ echo "🔢 Box64 Commit: $COMMIT_HASH"
 # Apply iOS compatibility patches
 echo "🔧 Applying iOS compatibility patches..."
 
-# Fix PROT_* macro redefinition by wrapping them in ifndef guards
-sed -i.bak 's|#define PROT_READ|#ifndef PROT_READ\n#define PROT_READ|g' src/include/os.h
-sed -i.bak 's|#define PROT_WRITE|#ifndef PROT_WRITE\n#define PROT_WRITE|g' src/include/os.h
-sed -i.bak 's|#define PROT_EXEC|#ifndef PROT_EXEC\n#define PROT_EXEC|g' src/include/os.h
+# Create a backup of the original file
+cp src/include/os.h src/include/os.h.bak
 
-# Add endif at the end of the macro definitions
-sed -i.bak 's|#define PROT_EXEC  0x4|#define PROT_EXEC  0x4\n#endif|g' src/include/os.h
+# Fix PROT_* macro redefinition by commenting them out on iOS
+# Since iOS already defines these macros, we don't need Box64's definitions
+sed -i.bak 's/^#define PROT_READ/\/\/ #define PROT_READ/' src/include/os.h
+sed -i.bak 's/^#define PROT_WRITE/\/\/ #define PROT_WRITE/' src/include/os.h
+sed -i.bak 's/^#define PROT_EXEC/\/\/ #define PROT_EXEC/' src/include/os.h
 
 echo "✅ iOS patches applied"
 
