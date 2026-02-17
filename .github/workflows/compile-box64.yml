@@ -1,0 +1,77 @@
+name: Compile Box64 for iOS
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'compile_engine.sh' ]
+  pull_request:
+    branches: [ main ]
+    paths: [ 'compile_engine.sh' ]
+  workflow_dispatch:
+
+jobs:
+  compile-box64:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
+        
+    - name: Show Xcode and SDK info
+      run: |
+        xcodebuild -version
+        xcodebuild -showsdks
+        xcrun --sdk iphoneos --show-sdk-path
+        xcrun --find clang
+        xcrun --find clang++
+        
+    - name: Compile Box64 for iOS A18 Pro
+      run: |
+        echo "🚀 Starting Box64 compilation for iOS A18 Pro..."
+        ./compile_engine.sh
+        
+    - name: Verify Framework
+      run: |
+        echo "🔍 Verifying Box64.framework..."
+        if [ -d "Box64.framework" ]; then
+          echo "✅ Framework directory exists"
+          
+          echo "📊 Framework contents:"
+          ls -la Box64.framework/
+          
+          echo "🔍 Binary architecture:"
+          lipo -info Box64.framework/Box64
+          
+          echo "📄 Framework Info.plist:"
+          cat Box64.framework/Info.plist
+          
+          echo "📋 Header file:"
+          cat Box64.framework/Headers/box64.h
+        else
+          echo "❌ Framework not found!"
+          exit 1
+        fi
+        
+    - name: Upload Box64 Framework
+      uses: actions/upload-artifact@v4
+      with:
+        name: Box64-iOS-Framework
+        path: Box64.framework/
+        retention-days: 30
+        
+    - name: Create Release Asset
+      run: |
+        echo "📦 Creating release asset..."
+        zip -r Box64.framework.zip Box64.framework/
+        
+    - name: Upload Release Asset
+      uses: actions/upload-artifact@v4
+      with:
+        name: Box64-iOS-Zip
+        path: Box64.framework.zip
+        retention-days: 30
