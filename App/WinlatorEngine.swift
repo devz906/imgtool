@@ -1,7 +1,7 @@
 import Foundation
 import UIKit
 
-class WinlatorEngine {
+class WinlatorEngine: ObservableObject {
     static let shared = WinlatorEngine()
     
     private var process: Process?
