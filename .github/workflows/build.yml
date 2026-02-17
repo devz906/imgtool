@@ -54,11 +54,12 @@ jobs:
           exit 1
         fi
         if [ ! -x "compile_engine.sh" ]; then
-          echo "❌ compile_engine.sh is not executable!"
-          exit 1
+          echo "❌ Script is not executable, running with bash directly..."
+          bash compile_engine.sh
+        else
+          echo "✅ Script found and executable, running..."
+          ./compile_engine.sh
         fi
-        echo "✅ Script found and executable, running..."
-        ./compile_engine.sh
         
     - name: Verify Box64 Framework
       run: |
