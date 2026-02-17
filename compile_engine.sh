@@ -87,6 +87,7 @@ cmake ../box64_source \
     -DCMAKE_INSTALL_PREFIX="../$INSTALL_DIR" \
     -DARM_DYNAREC=ON \
     -DAPPLE=1 \
+    -DPAGE16K=ON \
     -DNOGIT=ON \
     -DARM64=1 \
     -DLD80BITS=1 \
@@ -95,8 +96,8 @@ cmake ../box64_source \
     -DCMAKE_INSTALL_LIBDIR="lib" \
     -DCMAKE_MACOSX_BUNDLE=OFF
 
-# Build Box64 - build interpreter and main box64 executable (skip dynarec for iOS compatibility)
-echo "🔨 Building Box64 for iOS A18 Pro (interpreter + main executable, no dynarec)..."
+# Build Box64 - build interpreter and main box64 executable with DynaRec enabled
+echo "🔨 Building Box64 for iOS A18 Pro (interpreter + main executable with DynaRec)..."
 make interpreter -j$(sysctl -n hw.ncpu)
 
 # Try to build main box64 executable, but skip if dynarec fails
