@@ -1,112 +1,101 @@
 #import "JITManager.h"
+#import <mach/mach.h>
 #import <sys/mman.h>
 #import <unistd.h>
-#import <iostream>
 
 @implementation JITManager
 
-+ (BOOL)initializeJITEnvironment {
-    NSLog(@"🚀 Initializing JIT environment for Box64...");
++ (instancetype)sharedManager {
+    static JITManager *sharedInstance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sharedInstance = [[JITManager alloc] init];
+    });
+    return sharedInstance;
+}
+
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        // Initialize any required resources
+    }
+    return self;
+}
+
+- (BOOL)enableJITWithError:(NSError *_Nullable *_Nullable)error {
+    // iOS JIT activation through alternative methods
+    // Note: ptrace is not available on iOS, but JIT can still work with proper entitlements
     
-    // Signal to iOS that this process is being 'debugged' (required for JIT via SideStore)
-    // This is a critical step for JIT to work on iOS without developer certificate
-    if (ptrace(PT_TRACE_ME, 0, 0, 0) == -1) {
-        NSLog(@"❌ Failed to initialize ptrace for JIT: %s", strerror(errno));
+    // Method 1: Check if we're running in a debugger-like environment
+    // This can help with JIT activation on iOS
+    
+    // Method 2: Use mach_vm_allocate for executable memory
+    vm_protect_result_t result;
+    mach_vm_address_t address = 0;
+    mach_vm_size_t size = getpagesize();
+    
+    kern_return_t kr = mach_vm_allocate(mach_task_self(), &address, size, VM_FLAGS_ANYWHERE);
+    if (kr == KERN_SUCCESS) {
+        // Try to make memory executable
+        kr = mach_vm_protect(mach_task_self(), address, size, VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE, FALSE);
+        if (kr == KERN_SUCCESS) {
+            // Clean up test allocation
+            mach_vm_deallocate(mach_task_self(), address, size);
+            return YES;
+        }
+        mach_vm_deallocate(mach_task_self(), address, size);
+    }
+    
+    // If mach methods fail, return NO but don't set error for now
+    return NO;
+}
+
+- (BOOL)supports16KPages {
+    // Check if running on A18 Pro or newer with 16KB pages
+    size_t pageSize = sysconf(_SC_PAGESIZE);
+    return pageSize == 16384; // 16KB pages
+}
+
+- (BOOL)initializeBox64With16KPages:(BOOL)use16KPages error:(NSError *_Nullable *_Nullable)error {
+    // Placeholder for Box64 initialization
+    // This would integrate with the actual Box64 framework
+    
+    if (![self supports16KPages] && use16KPages) {
+        if (error) {
+            *error = [NSError errorWithDomain:@"JITManagerDomain" 
+                                             code:1001 
+                                         userInfo:@{NSLocalizedDescriptionKey: @"Device does not support 16KB pages"}];
+        }
         return NO;
     }
     
-    NSLog(@"✅ ptrace initialized successfully - JIT environment ready");
-    
-    // Enable JIT write protection
-    [JITManager enableJITWriteProtection:YES];
+    // TODO: Initialize actual Box64 framework
+    // This would call into the Box64.framework we created
+    NSLog(@"Box64 initialization placeholder - 16KB pages: %@", use16KPages ? @"YES" : @"NO");
     
     return YES;
 }
 
-+ (BOOL)check16KBPageSize {
-    NSLog(@"📄 Checking 16KB page size support...");
+- (void *)allocateExecutableMemory:(size_t)size {
+    // Use mach_vm_allocate for iOS-compatible executable memory
+    mach_vm_address_t address = 0;
     
-    // Get system page size
-    long pageSize = sysconf(_SC_PAGESIZE);
-    NSLog(@"📏 System page size: %ld bytes", pageSize);
-    
-    // Check if page size is 16KB (16384 bytes)
-    if (pageSize == 16384) {
-        NSLog(@"✅ 16KB page size detected - optimal for Box64");
-        return YES;
-    } else if (pageSize == 4096) {
-        NSLog(@"⚠️ 4KB page size detected - Box64 can still work but may be less optimal");
-        return YES; // Box64 can work with 4KB pages too
-    } else {
-        NSLog(@"❌ Unsupported page size: %ld bytes", pageSize);
-        return NO;
+    kern_return_t kr = mach_vm_allocate(mach_task_self(), &address, size, VM_FLAGS_ANYWHERE);
+    if (kr == KERN_SUCCESS) {
+        // Make memory executable
+        kr = mach_vm_protect(mach_task_self(), address, size, VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE, FALSE);
+        if (kr == KERN_SUCCESS) {
+            return (void *)address;
+        }
+        mach_vm_deallocate(mach_task_self(), address, size);
     }
+    
+    return NULL;
 }
 
-+ (BOOL)initializeBox64Environment {
-    NSLog(@"🎮 Initializing Box64 environment...");
-    
-    // Check page size first
-    if (![JITManager check16KBPageSize]) {
-        NSLog(@"❌ Page size check failed - cannot initialize Box64");
-        return NO;
-    }
-    
-    // Placeholder for actual Box64 initialization
-    // This will eventually include:
-    
-    NSLog(@"✅ Box64 environment initialized successfully");
-    return YES;
-}
-
-+ (void)enableJITWriteProtection:(BOOL)enabled {
-    if (enabled) {
-        NSLog(@"🔓 Enabling JIT write protection for code generation");
-        // On iOS with proper entitlements, this allows memory to be both writable and executable
-        // Critical for dynamic code generation in Box64
-    } else {
-        NSLog(@"🔒 Disabling JIT write protection for security");
-        // Re-enable normal memory protection
-    }
-}
-
-// C++ helper functions for Box64 integration
-extern "C" {
-    
-    // Placeholder for Box64 main initialization
-    int box64_init_placeholder() {
-        NSLog(@"🎮 Box64 C++ initialization placeholder");
-        
-        // Check page size
-        if (![JITManager check16KBPageSize]) {
-            return -1;
-        }
-        
-        // Initialize JIT environment
-        if (![JITManager initializeJITEnvironment]) {
-            return -1;
-        }
-        
-        // Initialize Box64 environment
-        if (![JITManager initializeBox64Environment]) {
-            return -1;
-        }
-        
-        return 0; // Success
-    }
-    
-    // Placeholder for memory allocation with executable permissions
-    void* allocate_executable_memory(size_t size) {
-        return [[JITManager sharedManager] allocateExecutableMemory:size];
-    }
-    
-    // Placeholder for memory deallocation
-    void free_executable_memory(void* memory, size_t size) {
-        [[JITManager sharedManager] deallocateExecutableMemory:memory size:size];
-        if (memory && memory != MAP_FAILED) {
-            munmap(memory, size);
-            NSLog(@"✅ Freed executable memory at %p", memory);
-        }
+- (void)deallocateExecutableMemory:(void *)memory size:(size_t)size {
+    if (memory) {
+        mach_vm_deallocate(mach_task_self(), (mach_vm_address_t)memory, size);
     }
 }
 
