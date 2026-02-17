@@ -1,0 +1,88 @@
+name: Build IMGTool iOS App
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
+        
+    - name: Show Xcode and SDK info
+      run: |
+        xcodebuild -version
+        xcodebuild -showsdks
+        xcrun --sdk iphoneos --show-sdk-path
+        xcrun --find clang
+        xcrun --find clang++
+        
+    - name: Make compilation script executable
+      run: |
+        echo "🔧 Making compile_engine.sh executable..."
+        chmod +x compile_engine.sh
+        
+    - name: Compile Box64 for iOS A18 Pro
+      run: |
+        echo "🚀 Compiling Box64 for iOS A18 Pro..."
+        ./compile_engine.sh
+        
+    - name: Verify Box64 Framework
+      run: |
+        echo "🔍 Verifying Box64.framework..."
+        if [ -d "Box64.framework" ]; then
+          echo "✅ Framework directory exists"
+          echo "📊 Framework contents:"
+          ls -la Box64.framework/
+          echo "🔍 Binary architecture:"
+          lipo -info Box64.framework/Box64
+        else
+          echo "❌ Framework not found!"
+          exit 1
+        fi
+        
+    - name: Install XcodeGen
+      run: |
+        echo "📦 Installing XcodeGen..."
+        brew install xcodegen
+        
+    - name: Generate Xcode project
+      run: |
+        echo "⚙️ Generating Xcode project..."
+        xcodegen generate
+        
+    - name: Build iOS app
+      run: |
+        echo "🔨 Building IMGTool iOS app..."
+        xcodebuild -project IMGTool.xcodeproj \
+                   -scheme IMGTool \
+                   -configuration Debug \
+                   -destination generic/platform=iOS \
+                   -derivedDataPath build \
+                   -allowProvisioningUpdates \
+                   clean build
+                   
+    - name: Upload Box64 Framework
+      uses: actions/upload-artifact@v4
+      with:
+        name: Box64-Framework
+        path: Box64.framework/
+        retention-days: 30
+        
+    - name: Upload Build Logs
+      uses: actions/upload-artifact@v4
+      with:
+        name: Build-Logs
+        path: build/
+        retention-days: 7
