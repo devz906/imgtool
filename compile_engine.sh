@@ -110,7 +110,7 @@ if [ -f "box64" ]; then
     # Create libbox64.dylib from the box64 binary for iOS framework
     echo "📦 Creating libbox64.dylib from box64 binary..."
     "$CC_PATH" -dynamiclib -o "../libbox64.dylib" \
-        -sysroot "$SYSROOT_PATH" \
+        -isysroot "$SYSROOT_PATH" \
         -target "$TARGET_ARCH-apple-ios$MIN_IOS_VERSION" \
         -install_name "@rpath/libbox64.dylib" \
         box64 \
@@ -251,7 +251,7 @@ else
         
         # Create dynamic library
         "$CC_PATH" -dynamiclib -o "../libbox64.dylib" \
-            -sysroot "$SYSROOT_PATH" \
+            -isysroot "$SYSROOT_PATH" \
             -target "$TARGET_ARCH-apple-ios$MIN_IOS_VERSION" \
             -install_name "@rpath/libbox64.dylib" \
             src/libbox64.a \
@@ -365,7 +365,7 @@ EOF
             
             # Create dylib from interpreter objects
             "$CC_PATH" -dynamiclib -o "../libbox64.dylib" \
-                -sysroot "$SYSROOT_PATH" \
+                -isysroot "$SYSROOT_PATH" \
                 -target "$TARGET_ARCH-apple-ios$MIN_IOS_VERSION" \
                 -install_name "@rpath/libbox64.dylib" \
                 $OBJECT_FILES \
