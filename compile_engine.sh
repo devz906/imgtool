@@ -95,9 +95,10 @@ cmake ../box64_source \
     -DCMAKE_INSTALL_LIBDIR="lib" \
     -DCMAKE_MACOSX_BUNDLE=OFF
 
-# Build Box64 - only build interpreter target to avoid dynarec issues
-echo "🔨 Building Box64 for iOS A18 Pro (interpreter only)..."
+# Build Box64 - build both interpreter and main box64 executable
+echo "🔨 Building Box64 for iOS A18 Pro (interpreter + main executable)..."
 make interpreter -j$(sysctl -n hw.ncpu)
+make box64 -j$(sysctl -n hw.ncpu)
 
 # Check if box64 binary was created
 if [ -f "box64" ]; then
