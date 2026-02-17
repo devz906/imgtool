@@ -5,6 +5,7 @@ struct ContentView: View {
     @State private var isJITInitialized = false
     @State private var isBox64Initialized = false
     @State private var pageSize: Int = 0
+    @State private var systemPageSize: String = ""
     @State private var statusMessage = "Ready to initialize JIT environment"
     @State private var showingAlert = false
     @State private var alertMessage = ""
@@ -148,7 +149,8 @@ struct ContentView: View {
         
         DispatchQueue.global(qos: .userInitiated).async(execute: DispatchWorkItem {
             let jitManager = JITManager.sharedManager()
-            let success = jitManager.enableJITWithError(nil)
+            var error: NSError?
+            let success = jitManager.enableJITWithError(&error)
             
             DispatchQueue.main.async(execute: DispatchWorkItem {
                 if success {
@@ -174,7 +176,8 @@ struct ContentView: View {
         DispatchQueue.global(qos: .userInitiated).async(execute: DispatchWorkItem {
             let jitManager = JITManager.sharedManager()
             let use16KPages = jitManager.supports16KPages()
-            let success = jitManager.initializeBox64With16KPages(use16KPages, error: nil)
+            var error: NSError?
+            let success = jitManager.initializeBox64With16KPages(use16KPages, error: &error)
             
             DispatchQueue.main.async(execute: DispatchWorkItem {
                 if success {
